@@ -38,7 +38,7 @@ nwbfiledir = 'data'
 
 
 @schema
-class InputFiles(dj.Lookup):
+class InputFile(dj.Lookup):
     definition = '''
     nwb_file: varchar(255)
     '''
@@ -49,6 +49,7 @@ class InputFiles(dj.Lookup):
 
 @schema
 class Keyword(dj.Lookup):
+    TODO = True
     definition = """
     # Tag of study types
     keyword : varchar(24)
@@ -58,6 +59,7 @@ class Keyword(dj.Lookup):
 
 @schema
 class Study(dj.Manual):
+    TODO = True
     definition = """
     # Study
     study		: varchar(8)    # short name of the study
@@ -68,24 +70,20 @@ class Study(dj.Manual):
     reference_atlas	: varchar(255)	# e.g. "paxinos"
     """
 
-    def _make_tuples(self, key):
-        TODO = True
-
 
 @schema
 class StudyKeyword(dj.Manual):
+    TODO = True
     definition = """
     # Study keyword (see general/notes)
     -> Study
     -> Keyword
     """
 
-    def _make_tuples(self, key):
-        TODO = True
-
 
 @schema
 class Publication(dj.Manual):
+    TODO = True
     definition = """
     # Publication
     doi			: varchar(60)	# publication DOI
@@ -95,29 +93,24 @@ class Publication(dj.Manual):
     title=''		: varchar(1024)
     """
 
-    def _make_tuples(self, key):
-        TODO = True
-
 
 @schema
 class RelatedPublication(dj.Manual):
+    TODO = True
     definition = """
     -> Study
     -> Publication
     """
 
-    def _make_tuples(self, key):
-        TODO = True
-
 
 @schema
 class Animal(dj.Manual):
-    definition = '''
+    definition = """
     animal_id		: int		# Janelia institution mouse IDs
     ---
     species		: varchar(30)
     date_of_birth	: date
-    '''
+    """
 
 
 @schema
@@ -128,14 +121,9 @@ class Surgery(dj.Manual):
     surgery		: varchar(4000)	# description of surgery
     """
 
-    def _make_tuples(self, key):
-        TODO = True
-
 
 @schema
 class Virus(dj.Manual):
-
-    TODO = True
 
     definition = """
     -> Animal
@@ -177,12 +165,12 @@ class Session(dj.Imported):
     session_start_time	: datetime
     raw_data_path	: varchar(255)	# raw data file path
     recording_type	: varchar(8)	# e.g. actute
-    -> InputFiles
+    -> InputFile
     '''
 
     @property
     def key_source(self):
-        return InputFiles()
+        return InputFile()
 
     def _make_tuples(self, key):
 
@@ -206,7 +194,6 @@ class Session(dj.Imported):
             (sdate, sfx) = (sdate, '',)
 
         # Animal
-        # TODO: separate auto-ingest for Animal
         g_gen = f['general']
 
         akey = {'animal_id': aid}
@@ -214,7 +201,54 @@ class Session(dj.Imported):
             g_subj = g_gen['subject']
             akey['species'] = g_subj['species'][()].decode()
             akey['date_of_birth'] = '1970-01-01'  # TODO: convert 'age'
-            Animal().insert1(akey)
+            Animal().insert1(akey, ignore_extra_fields=True)
+
+            if not (Surgery() & akey):
+                akey['surgery'] = g_gen['surgery'][()].decode()
+                Surgery().insert1(akey, ignore_extra_fields=True)
+
+            if not (Virus() & akey):
+                '''
+                >>> print(fh['general']['virus'][()].decode())
+                infectionCoordinates: [2.5, -1.5, 0.5],[2.5, -1.5, 0.85]
+                 infectionLocation: M2
+                 injectionDate: 20130523
+                 injectionVolume: 30,30
+                 virusID: Addgene41015
+                 virusLotNumber:
+                 virusSource: Janelia core
+                 virusTiter: untitered
+                '''
+                Virus().insert1(akey, ignore_extra_fields=True)
+                # fun with miniparsers! (yaml/json didn't "take")
+                virstr = g_gen['virus'][()].decode()
+                virlex = re.compile(' *(.*?): (.*)')
+                akey['site'] = 'some site!'
+                i = 0
+                for line in virstr.split('\n'):
+                    kvmatch = virlex.match(line)
+                    if kvmatch:
+                        (k, v) = kvmatch.groups()
+                        if k == 'infectionCoordinates':
+                            if '[' in v:
+                                for s in v.split('],['):  # 3d triplet list
+                                    (x, y, z) = s[1:-1].split(', ')
+                                    i = i + 1
+                                    akey['site'] = i
+                                    akey['infection_x'] = Decimal(x)
+                                    akey['infection_y'] = Decimal(y)
+                                    akey['infection_z'] = Decimal(z)
+                                    Virus.InfectionSite().insert1(
+                                        akey, ignore_extra_fields=True)
+                            else:  # single triplet list
+                                (x, y, z) = [s[1:-1].split(', ')]
+                                i = i + 1
+                                akey['site'] = i
+                                akey['infection_x'] = Decimal(x)
+                                akey['infection_y'] = Decimal(y)
+                                akey['infection_z'] = Decimal(z)
+                                Virus.InfectionSite().insert1(
+                                    akey, ignore_extra_fields=True)
 
         key['animal_id'] = aid
         key['session'] = int(sdate + '00')  # TODO: sfx -> NN{00:26}
