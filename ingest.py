@@ -55,9 +55,6 @@ class Keyword(dj.Lookup):
     """
     contents = zip(['behavior', 'extracellular', 'photostim'])
 
-    def _make_tuples(self, key):
-        TODO = True
-
 
 @schema
 class Study(dj.Manual):
@@ -209,8 +206,15 @@ class Session(dj.Imported):
             (sdate, sfx) = (sdate, '',)
 
         # Animal
-        if not (Animal() & {'animal_id': aid}):
-            Animal().insert1((aid, 'squeaky', '1970-01-01',))
+        # TODO: separate auto-ingest for Animal
+        g_gen = f['general']
+
+        akey = {'animal_id': aid}
+        if not (Animal() & akey):
+            g_subj = g_gen['subject']
+            akey['species'] = g_subj['species'][()].decode()
+            akey['date_of_birth'] = '1970-01-01'  # TODO: convert 'age'
+            Animal().insert1(akey)
 
         key['animal_id'] = aid
         key['session'] = int(sdate + '00')  # TODO: sfx -> NN{00:26}
@@ -218,7 +222,7 @@ class Session(dj.Imported):
         key['session_suffix'] = sfx
 
         # various
-        key['experimenter'] = f['general']['experimenter'][()].decode()
+        key['experimenter'] = g_gen['experimenter'][()].decode()
         key['raw_data_path'] = f['acquisition']['timeseries']['extracellular_traces']['ephys_raw_data'][()].decode()
 
         key['recording_type'] = 'TODO'  # TODO: recording_type
@@ -525,7 +529,6 @@ class Acquisition(dj.Computed):
 
     def _make_tuples(self, key):
 
-        print('yoyo')
         key['nwb_file'] = (Session() & key).fetch1()['nwb_file']
         f = h5py.File(key['nwb_file'], 'r')
 
@@ -592,15 +595,20 @@ class Acquisition(dj.Computed):
                 self.StimulusPresentation().insert1(
                     key, ignore_extra_fields=True)
             except IntegrityError:  # TODO: handle NaN in timestamps
-                print('.StimulusPresentation error: session', key['session'],
+                print('.StimulusPresentation error (NaN?):',
+                      'session', key['session'],
                       'trial:', key['trial'])
 
         f.close()
 
 
 if __name__ == '__main__':
+    print('Session().populate()')
     Session().populate()
+    print('Ephys().populate()')
     Ephys().populate()
+    print('SpikeSorting().populate()')
     SpikeSorting().populate()
+    print('Acquisition().populate()')
     Acquisition().populate()
     # code.interact(banner="alm-1 datajoint ingest schema", local=locals())
