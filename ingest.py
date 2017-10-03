@@ -660,7 +660,8 @@ class Acquisition(dj.Computed):
         for tkey in [k for k in g_epochs if 'trial_' in k]:
 
             # Acquisition.Trial
-            tno = int(tkey.split('_')[1])  # TODO: dup local var? (vs string)
+            tno = int(tkey.split('_')[1])
+            tidx = tno - 1  # for off-by-one
             key['trial'] = tkey.split('_')[1]
             key['start_time'] = g_epochs[tkey]['start_time'][()]
             key['stop_time'] = g_epochs[tkey]['stop_time'][()]
@@ -680,7 +681,7 @@ class Acquisition(dj.Computed):
             ttmat = g_analysis['trial_type_mat']
             ttstr = g_analysis['trial_type_string']
             for i in range(len(ttmat)):  # 8 trial types
-                if ttmat[i][(tno - 1)]:  # off-by-1;
+                if ttmat[i][tidx]:
                     key['trial_type'] = ttstr[i].decode()
                     self.TrialTypes().insert1(key, ignore_extra_fields=True)
 
@@ -691,7 +692,6 @@ class Acquisition(dj.Computed):
             ipoletamps = g_pres['pole_in']['timestamps']
             opolestamps = g_pres['pole_out']['timestamps']
 
-            tidx = tno - 1
             key['auditory_timestamp'] = Decimal(float(cuestamps[tidx]))
             key['auditory_cue'] = cuedat[tidx]
             key['pole_in_timestamp'] = ipoletamps[tidx]
