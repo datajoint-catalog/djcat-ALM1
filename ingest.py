@@ -49,7 +49,7 @@ class InputFile(dj.Lookup):
 
 @schema
 class Keyword(dj.Lookup):
-    TODO = True
+
     definition = """
     # Tag of study types
     keyword : varchar(24)
@@ -59,7 +59,7 @@ class Keyword(dj.Lookup):
 
 @schema
 class Study(dj.Manual):
-    TODO = True
+
     definition = """
     # Study
     study		: varchar(8)    # short name of the study
@@ -91,7 +91,7 @@ class Study(dj.Manual):
 
 @schema
 class StudyKeyword(dj.Manual):
-    TODO = True
+
     definition = """
     # Study keyword (see general/notes)
     -> Study
@@ -101,7 +101,7 @@ class StudyKeyword(dj.Manual):
 
 @schema
 class Publication(dj.Manual):
-    TODO = True
+
     definition = """
     # Publication
     doi			: varchar(60)	# publication DOI
@@ -115,7 +115,7 @@ class Publication(dj.Manual):
 
 @schema
 class RelatedPublication(dj.Manual):
-    TODO = True
+    RELATEDPUBLICATION_TODO = True
     definition = """
     -> Study
     -> Publication
@@ -149,8 +149,6 @@ class Virus(dj.Manual):
     """
 
     class InfectionSite(dj.Part):
-
-        TODO = True
 
         definition = """
         -> Virus
@@ -306,7 +304,7 @@ class Session(dj.Imported):
 @schema
 class Optogenetics(dj.Manual):
 
-    TODO = True
+    OPTOGENETICS_TODO = True
 
     definition = """
     # Optogenetic stimulation information for the sesssion
@@ -314,8 +312,6 @@ class Optogenetics(dj.Manual):
     """
 
     class Site(dj.Part):
-
-        TODO = True
 
         definition = """
         # Optogenetic stimulation site
@@ -334,7 +330,7 @@ class Optogenetics(dj.Manual):
 @schema
 class TrialType(dj.Lookup):
 
-    TODO = '''
+    TRIALTYPE_TODO = '''
     - split into expected / observed
     - implies updating Acquisition.TrialTypes to match
     '''
@@ -632,7 +628,7 @@ class Acquisition(dj.Computed):
         for tkey in [k for k in g_epochs if 'trial_' in k]:
 
             # Acquisition.Trial
-            tno = int(tkey.split('_')[1])  # TODO: dup var? (vs string)
+            tno = int(tkey.split('_')[1])  # TODO: dup local var? (vs string)
             key['trial'] = tkey.split('_')[1]
             key['start_time'] = g_epochs[tkey]['start_time'][()]
             key['stop_time'] = g_epochs[tkey]['stop_time'][()]
