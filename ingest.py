@@ -19,7 +19,7 @@ from pymysql.err import IntegrityError
 
 import yaml
 
-{'unused': [code, datetime, nwb_utils, yaml]}
+{'unused': [code, nwb_utils, yaml]}
 # 23456789_123456789_123456789_123456789_123456789_123456789_123456789_12345678
 
 dj.config['database.host'] = 'localhost'
