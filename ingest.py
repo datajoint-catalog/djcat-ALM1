@@ -70,6 +70,24 @@ class Study(dj.Manual):
     reference_atlas	: varchar(255)	# e.g. "paxinos"
     """
 
+    def _from_nwb(self, fh):
+        g_gen = fh['general']
+        dct = {
+            'study': 'ALM-1',  # XXX: is this best?
+            'study_description': fh['session_description'][()].decode(),
+            'institution': g_gen['institution'][()].decode(),
+            'lab': g_gen['lab'][()].decode(),
+            'reference_atlas': g_gen['reference_atlas'][()].decode()
+        }
+        self.insert1(dct)
+
+        for n in g_gen['notes'][()].decode().split(','):
+            dct['keyword'] = n
+            StudyKeyword().insert1(dct, ignore_extra_fields=True)
+
+        dct['doi'] = g_gen['related_publications'][()].decode()
+        Publication().insert1(dct, ignore_extra_fields=True)
+
 
 @schema
 class StudyKeyword(dj.Manual):
@@ -87,11 +105,12 @@ class Publication(dj.Manual):
     definition = """
     # Publication
     doi			: varchar(60)	# publication DOI
-    ----
-    full_citation	: varchar(4000)
+    ---
+    full_citation=''	: varchar(4000)
     authors=''		: varchar(4000)
     title=''		: varchar(1024)
     """
+    # g_gen['related_publications'][()].decode()
 
 
 @schema
@@ -175,6 +194,7 @@ class Session(dj.Imported):
     def _make_tuples(self, key):
 
         fname = key['nwb_file']
+        print('Session()._make_tuples: nwb_file', key['nwb_file'])
 
         use_nwb_file = False  # slower due to validation; more memory use
         if use_nwb_file:
@@ -182,13 +202,23 @@ class Session(dj.Imported):
         else:
             f = h5py.File(key['nwb_file'], 'r')
 
+        # Common study information - should only need to load 1x.
+        try:
+            Study()._from_nwb(f)
+        except IntegrityError as e:
+            if 'Duplicate entry' in e.args[1]:
+                pass
+            else:
+                raise
+
         # fname: /path/to/file/data_structure_ANM210861_20130701.nwb
         (__, __, aid, sdate) = os.path.split(fname)[-1:][0].split('_')
 
         # animal id / session id / session_date / session_suffix
         aid = aid[3:]  # ANMNNN -> NNN
         sdate = sdate.split('.')[:-1][0]  # drop '.nwb'
-        if re.match('[a-zA-Z]', sdate):
+        
+        if len(sdate) == 9:
             (sdate, sfx) = (sdate[:-1], sdate[-1:],)
         else:
             (sdate, sfx) = (sdate, '',)
@@ -251,7 +281,12 @@ class Session(dj.Imported):
                                     akey, ignore_extra_fields=True)
 
         key['animal_id'] = aid
-        key['session'] = int(sdate + '00')  # TODO: sfx -> NN{00:26}
+        if sfx is not '':
+            sid = int(sdate + str(ord(sfx)-ord('a')+1).zfill(2))  # sfx -> NN
+        else:
+            sid = int(sdate + '00')
+
+        key['session'] = sid
         key['session_date'] = sdate
         key['session_suffix'] = sfx
 
@@ -362,6 +397,7 @@ class Ephys(dj.Computed):
     def _make_tuples(self, key):
 
         key['nwb_file'] = (Session() & key).fetch1()['nwb_file']
+        print('Ephys()._make_tuples: nwb_file', key['nwb_file'])
         f = h5py.File(key['nwb_file'], 'r')
 
         g_gen = f['general']
@@ -464,7 +500,9 @@ class SpikeSorting(dj.Computed):
         """
 
     def _make_tuples(self, key):
+
         key['nwb_file'] = (Session() & key).fetch1()['nwb_file']
+        print('SpikeSorting()._make_tuples: nwb_file', key['nwb_file'])
         f = h5py.File(key['nwb_file'], 'r')
 
         g_xlu = f['processing']['extracellular_units']
@@ -494,7 +532,11 @@ class SpikeSorting(dj.Computed):
                 print('SpikeSorting.Unit mismatch:',
                       'unit:', unit, 'cell_unit:', c_unit)
 
+            if c_str == 'pyramidal and IT' or c_str == 'pyramidal and PT':
+                c_str = 'pyramidal'  # FIXME
+
             key['cell_type'] = c_str
+
             if c_str != '[]':
                 self.Type().insert1(key, ignore_extra_fields=True)
 
@@ -564,6 +606,7 @@ class Acquisition(dj.Computed):
     def _make_tuples(self, key):
 
         key['nwb_file'] = (Session() & key).fetch1()['nwb_file']
+        print('Session()._make_tuples: nwb_file', key['nwb_file'])
         f = h5py.File(key['nwb_file'], 'r')
 
         g_acq = f['acquisition']
@@ -645,4 +688,5 @@ if __name__ == '__main__':
     SpikeSorting().populate()
     print('Acquisition().populate()')
     Acquisition().populate()
+    print('import complete.')
     # code.interact(banner="alm-1 datajoint ingest schema", local=locals())
