@@ -444,7 +444,7 @@ class CellType(dj.Lookup):
     definition = """
     cell_type  : varchar(12)
     """
-    contents = zip(['pyramidal', 'FS'])
+    contents = zip(['pyramidal', 'FS', 'PT', 'IT'])
 
 
 @schema
@@ -474,7 +474,6 @@ class SpikeSorting(dj.Computed):
 
         definition = """
         -> SpikeSorting.Unit
-        ---
         -> CellType
         """
 
@@ -528,13 +527,14 @@ class SpikeSorting(dj.Computed):
                 print('SpikeSorting.Unit mismatch:',
                       'unit:', unit, 'cell_unit:', c_unit)
 
-            if c_str == 'pyramidal and IT' or c_str == 'pyramidal and PT':
-                c_str = 'pyramidal'  # FIXME
-
-            key['cell_type'] = c_str
-
-            if c_str != '[]':
-                self.Type().insert1(key, ignore_extra_fields=True)
+            if 'and' in c_str:
+                for c_str_i in c_str.split(' and '):
+                    key['cell_type'] = c_str_i
+                    self.Type().insert1(key, ignore_extra_fields=True)
+            else:
+                if c_str != '[]':
+                    key['cell_type'] = c_str
+                    self.Type().insert1(key, ignore_extra_fields=True)
 
             # Spikes
             key['spike_times'] = g_xlu['UnitTimes'][ukey]['times']
