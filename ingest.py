@@ -5,7 +5,8 @@ import os
 import re
 import code
 from decimal import Decimal
-import datetime  # TODO: proper time string ingest
+
+from datetime import datetime, timedelta
 
 import datajoint as dj
 
@@ -18,7 +19,7 @@ from pymysql.err import IntegrityError
 
 import yaml
 
-{'unused': [code, datetime, nwb_utils, yaml]}
+{'unused': [code, nwb_utils, yaml]}
 # 23456789_123456789_123456789_123456789_123456789_123456789_123456789_12345678
 
 dj.config['database.host'] = 'localhost'
@@ -200,7 +201,48 @@ class Session(dj.Imported):
         else:
             f = h5py.File(key['nwb_file'], 'r')
 
-        # Common study information - should only need to load 1x.
+        #
+        # General Session information
+        #
+
+        g_gen = f['general']
+
+        # fname: /path/to/file/data_structure_ANM210861_20130701.nwb
+        (__, __, aid, sdate) = os.path.split(fname)[-1:][0].split('_')
+
+        # animal id / session id / session_date / session_suffix
+        aid = aid[3:]  # ANMNNN -> NNN
+        key['animal_id'] = aid
+
+        sdate = sdate.split('.')[:-1][0]  # drop '.nwb'
+
+        if len(sdate) == 9:
+            (sdate, sfx) = (sdate[:-1], sdate[-1:],)
+        else:
+            (sdate, sfx) = (sdate, '',)
+
+        if sfx is not '':
+            sid = int(sdate + str(ord(sfx)-ord('a')+1).zfill(2))  # sfx -> NN
+        else:
+            sid = int(sdate + '00')
+
+        key['session'] = sid
+        key['session_date'] = sdate
+        key['session_suffix'] = sfx
+
+        stime = f['session_start_time'][()].decode()
+        stime = datetime.strptime(stime, '%a %b %d %Y %H:%M:%S')
+        key['session_start_time'] = stime
+
+        key['experimenter'] = g_gen['experimenter'][()].decode()
+        key['raw_data_path'] = f['acquisition']['timeseries']['extracellular_traces']['ephys_raw_data'][()].decode()
+
+        key['recording_type'] = 'TODO'  # TODO: recording_type
+
+        #
+        # Common Study information - should only need to load 1x per fileset
+        #
+
         try:
             Study()._from_nwb(f)
         except IntegrityError as e:
@@ -209,26 +251,35 @@ class Session(dj.Imported):
             else:
                 raise
 
-        # fname: /path/to/file/data_structure_ANM210861_20130701.nwb
-        (__, __, aid, sdate) = os.path.split(fname)[-1:][0].split('_')
-
-        # animal id / session id / session_date / session_suffix
-        aid = aid[3:]  # ANMNNN -> NNN
-        sdate = sdate.split('.')[:-1][0]  # drop '.nwb'
-        
-        if len(sdate) == 9:
-            (sdate, sfx) = (sdate[:-1], sdate[-1:],)
-        else:
-            (sdate, sfx) = (sdate, '',)
-
+        #
         # Animal
-        g_gen = f['general']
+        #
 
         akey = {'animal_id': aid}
         if not (Animal() & akey):
             g_subj = g_gen['subject']
             akey['species'] = g_subj['species'][()].decode()
-            akey['date_of_birth'] = '1970-01-01'  # TODO: convert 'age'
+
+            # calculate mouse DOB from age
+            subj_age = g_gen['subject']['age'][()].decode()
+            age_rx = re.compile(' *?(.*?) months *(.*?) days (.*?) weeks')
+            try:
+                (subj_m, subj_d, subj_w) = \
+                    [g if g != '' else '0'
+                     for g in age_rx.match(subj_age).groups()]
+
+                # XXX: assuming 4wks-per-month
+                subj_aged = timedelta(
+                    days=int(subj_d), weeks=(int(subj_w) + (int(subj_m) * 4)))
+
+                subj_dob = stime - subj_aged
+                akey['date_of_birth'] = subj_dob
+
+            except AttributeError:
+                # TODO?: all errors seem to be string '3 to 5 months weeks'
+                print('warning: subject', sid, 'age parse error:', subj_age)
+                akey['date_of_birth'] = '1970-01-01'
+
             Animal().insert1(akey, ignore_extra_fields=True)
 
             if not (Surgery() & akey):
@@ -277,25 +328,6 @@ class Session(dj.Imported):
                                 akey['infection_z'] = Decimal(z)
                                 Virus.InfectionSite().insert1(
                                     akey, ignore_extra_fields=True)
-
-        key['animal_id'] = aid
-        if sfx is not '':
-            sid = int(sdate + str(ord(sfx)-ord('a')+1).zfill(2))  # sfx -> NN
-        else:
-            sid = int(sdate + '00')
-
-        key['session'] = sid
-        key['session_date'] = sdate
-        key['session_suffix'] = sfx
-
-        # various
-        key['experimenter'] = g_gen['experimenter'][()].decode()
-        key['raw_data_path'] = f['acquisition']['timeseries']['extracellular_traces']['ephys_raw_data'][()].decode()
-
-        key['recording_type'] = 'TODO'  # TODO: recording_type
-
-        key['session_start_time'] = f['session_start_time'][()].decode()
-        key['session_start_time'] = '1970-01-01'  # TODO: strptime()
 
         f.close()
         self.insert1(key)
@@ -444,7 +476,7 @@ class CellType(dj.Lookup):
     definition = """
     cell_type  : varchar(12)
     """
-    contents = zip(['pyramidal', 'FS'])
+    contents = zip(['pyramidal', 'FS', 'PT', 'IT'])
 
 
 @schema
@@ -474,7 +506,6 @@ class SpikeSorting(dj.Computed):
 
         definition = """
         -> SpikeSorting.Unit
-        ---
         -> CellType
         """
 
@@ -528,13 +559,14 @@ class SpikeSorting(dj.Computed):
                 print('SpikeSorting.Unit mismatch:',
                       'unit:', unit, 'cell_unit:', c_unit)
 
-            if c_str == 'pyramidal and IT' or c_str == 'pyramidal and PT':
-                c_str = 'pyramidal'  # FIXME
-
-            key['cell_type'] = c_str
-
-            if c_str != '[]':
-                self.Type().insert1(key, ignore_extra_fields=True)
+            if 'and' in c_str:
+                for c_str_i in c_str.split(' and '):
+                    key['cell_type'] = c_str_i
+                    self.Type().insert1(key, ignore_extra_fields=True)
+            else:
+                if c_str != '[]':
+                    key['cell_type'] = c_str
+                    self.Type().insert1(key, ignore_extra_fields=True)
 
             # Spikes
             key['spike_times'] = g_xlu['UnitTimes'][ukey]['times']
@@ -628,7 +660,8 @@ class Acquisition(dj.Computed):
         for tkey in [k for k in g_epochs if 'trial_' in k]:
 
             # Acquisition.Trial
-            tno = int(tkey.split('_')[1])  # TODO: dup local var? (vs string)
+            tno = int(tkey.split('_')[1])
+            tidx = tno - 1  # for off-by-one
             key['trial'] = tkey.split('_')[1]
             key['start_time'] = g_epochs[tkey]['start_time'][()]
             key['stop_time'] = g_epochs[tkey]['stop_time'][()]
@@ -648,7 +681,7 @@ class Acquisition(dj.Computed):
             ttmat = g_analysis['trial_type_mat']
             ttstr = g_analysis['trial_type_string']
             for i in range(len(ttmat)):  # 8 trial types
-                if ttmat[i][(tno - 1)]:  # off-by-1;
+                if ttmat[i][tidx]:
                     key['trial_type'] = ttstr[i].decode()
                     self.TrialTypes().insert1(key, ignore_extra_fields=True)
 
@@ -659,7 +692,6 @@ class Acquisition(dj.Computed):
             ipoletamps = g_pres['pole_in']['timestamps']
             opolestamps = g_pres['pole_out']['timestamps']
 
-            tidx = tno - 1
             key['auditory_timestamp'] = Decimal(float(cuestamps[tidx]))
             key['auditory_cue'] = cuedat[tidx]
             key['pole_in_timestamp'] = ipoletamps[tidx]
