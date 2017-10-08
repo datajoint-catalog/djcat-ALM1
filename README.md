@@ -28,13 +28,13 @@ The [ALM1-erd.ipynb] notebook plots the entity-relationships diagrams (ERDs) for
 It comprises two schemas: `lab` for common elements across various studies and `alm1` for data specific to the ALM-1 study.
 
 ### Schema `lab`
-[lab erd](erd-lab.png)
+![lab erd](erd-lab.png)
 
 ### Schema `alm1`
-[lab erd](erd-alm.png)
+![lab erd](erd-alm.png)
 
 ### The entire pipeline
-[entire pipeline](erd.png)
+![entire pipeline](erd.png)
 
 ## Source Data for ingest 
 
