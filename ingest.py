@@ -3,7 +3,6 @@
 import os
 
 import re
-import code
 from decimal import Decimal
 
 from datetime import datetime, timedelta
@@ -11,16 +10,10 @@ from datetime import datetime, timedelta
 import datajoint as dj
 
 from nwb import nwb_file
-from nwb import nwb_utils
 
 import h5py
 
 from pymysql.err import IntegrityError
-
-import yaml
-
-{'unused': [code, nwb_utils, yaml]}
-# 23456789_123456789_123456789_123456789_123456789_123456789_123456789_12345678
 
 dj.config['database.host'] = 'localhost'
 dj.config['database.user'] = 'chris'
@@ -30,8 +23,8 @@ dj.config['safemode'] = False
 dj.config['ingest.database'] = 'tutorial_alm1_ingest'
 dj.config['production.database'] = 'catalog_alm1_dimitri'
 
-schema = dj.schema(dj.config['ingest.database'], locals())
-schema.drop(force=True)
+# schema = dj.schema(dj.config['ingest.database'], locals())
+# schema.drop(force=True)
 schema = dj.schema(dj.config['ingest.database'], locals())
 
 # 'data_structure_ANM210861_20130701.nwb'
