@@ -15,7 +15,7 @@ Before you start working with the pipeline, please obtain the following credenti
 * user name 
 * password
 
-E# Setup
+## Setup
 The instructions for downloading the DataJoint library are available here: 
 http://docs.datajoint.io/setup/Install-and-connect.html
 
@@ -31,7 +31,7 @@ It comprises two schemas: `lab` for common elements across various studies and `
 ![lab erd](erd-lab.png)
 
 ### Schema `alm1`
-![lab erd](erd-alm.png)
+![lab erd](erd-alm1.png)
 
 ### The entire pipeline
 ![entire pipeline](erd.png)
