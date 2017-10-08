@@ -28,7 +28,6 @@ dj.config['database.password'] = ''
 dj.config['display.limit'] = 5
 dj.config['safemode'] = False
 dj.config['ingest.database'] = 'tutorial_alm1_ingest'
-dj.config['production.database'] = 'catalog_alm1_dimitri'
 
 schema = dj.schema(dj.config['ingest.database'], locals())
 schema.drop(force=True)
