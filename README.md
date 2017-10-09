@@ -15,14 +15,28 @@ Before you start working with the pipeline, please obtain the following credenti
 * user name 
 * password
 
-# Setup
+## Setup
 The instructions for downloading the DataJoint library are available here: 
 http://docs.datajoint.io/setup/Install-and-connect.html
 
-# Support
-Please submit issues and questions through the [Issues tab above](https://github.com/datajoint-catalog/ALM-1/issues)
+## Support
+Please submit issues and questions through the [Issues tab above](https://github.com/datajoint-catalog/djcat-ALM1/issues)
 
-# Source Data
+
+## The pipeline design 
+The [ALM1-erd.ipynb] notebook plots the entity-relationships diagrams (ERDs) for the ALM1.
+It comprises two schemas: `lab` for common elements across various studies and `alm1` for data specific to the ALM-1 study.
+
+### Schema `lab`
+![lab erd](erd-lab.png)
+
+### Schema `alm1`
+![lab erd](erd-alm1.png)
+
+### The entire pipeline
+![entire pipeline](erd.png)
+
+## Source Data for ingest 
 
 Source data for this pipeline are available via CRCNS.org:
 http://crcns.org/data-sets/motor-cortex/alm-1
