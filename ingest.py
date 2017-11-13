@@ -561,7 +561,7 @@ class SpikeSorting(dj.Computed):
                     self.Type().insert1(key, ignore_extra_fields=True)
 
             # Spikes
-            key['spike_times'] = g_xlu['UnitTimes'][ukey]['times']
+            key['spike_times'] = g_xlu['UnitTimes'][ukey]['times'].value
             self.Spikes().insert1(key, ignore_extra_fields=True)
 
             # Waveform
@@ -626,18 +626,17 @@ class Acquisition(dj.Computed):
     def _make_tuples(self, key):
 
         key['nwb_file'] = (Session() & key).fetch1()['nwb_file']
-        print('Session()._make_tuples: nwb_file', key['nwb_file'])
+        print('Acquisition()._make_tuples: nwb_file', key['nwb_file'])
         f = h5py.File(key['nwb_file'], 'r')
 
         g_acq = f['acquisition']
         self.insert1(key, ignore_extra_fields=True)
 
         # Acquisition.LickTrace
-        key['lick_trace'] = g_acq['timeseries']['lick_trace']['data']
-        key['timestamps'] = g_acq['timeseries']['lick_trace']['timestamps']
+        key['lick_trace'] = g_acq['timeseries']['lick_trace']['data'].value
+        key['timestamps'] = g_acq['timeseries']['lick_trace']['timestamps'].value
 
-        # FIXME: ok? 21M rows.. hmm.
-        # self.LickTrace().insert1(key, ignore_extra_fields=True)
+        self.LickTrace().insert1(key, ignore_extra_fields=True)
 
         # Acquisition.Trial
         '''
