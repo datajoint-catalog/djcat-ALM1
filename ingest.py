@@ -356,7 +356,7 @@ class TrialType(dj.Lookup):
 
     TRIALTYPE_TODO = '''
     - split into expected / observed
-    - implies updating Acquisition.TrialTypes to match
+    - implies updating Acquisition.TrialType to match
     '''
 
     definition = """
@@ -494,7 +494,7 @@ class SpikeSorting(dj.Computed):
         unit			: smallint	# unit number
         """
 
-    class Type(dj.Part):
+    class CellType(dj.Part):
 
         definition = """
         -> SpikeSorting.Unit
@@ -554,11 +554,11 @@ class SpikeSorting(dj.Computed):
             if 'and' in c_str:
                 for c_str_i in c_str.split(' and '):
                     key['cell_type'] = c_str_i
-                    self.Type().insert1(key, ignore_extra_fields=True)
+                    self.CellType().insert1(key, ignore_extra_fields=True)
             else:
                 if c_str != '[]':
                     key['cell_type'] = c_str
-                    self.Type().insert1(key, ignore_extra_fields=True)
+                    self.CellType().insert1(key, ignore_extra_fields=True)
 
             # Spikes
             key['spike_times'] = g_xlu['UnitTimes'][ukey]['times'].value
@@ -598,7 +598,7 @@ class Acquisition(dj.Computed):
         stop_time		: float
         """
 
-    class TrialTypes(dj.Part):
+    class TrialType(dj.Part):
 
         definition = """
         -> Acquisition.Trial
@@ -641,7 +641,7 @@ class Acquisition(dj.Computed):
         # Acquisition.Trial
         '''
         alternately:
-        load TrialTypes, UnitInTrial, StimulusPresentation
+        load TrialType, UnitInTrial, StimulusPresentation
         in single top-level trial iteration
         '''
         g_epochs = f['epochs']
@@ -665,7 +665,7 @@ class Acquisition(dj.Computed):
                     key['unit'] = u.decode().split('_')[1]
                     self.UnitInTrial().insert1(key, ignore_extra_fields=True)
 
-            # Acquisition.TrialTypes
+            # Acquisition.TrialType
             # XXX: ignoring trial_start_times yet doesn't match epoch start
             # trial_start_times *seems* like unrounded epoch[n]['start_time']?
 
@@ -674,7 +674,7 @@ class Acquisition(dj.Computed):
             for i in range(len(ttmat)):  # 8 trial types
                 if ttmat[i][tidx]:
                     key['trial_type'] = ttstr[i].decode()
-                    self.TrialTypes().insert1(key, ignore_extra_fields=True)
+                    self.TrialType().insert1(key, ignore_extra_fields=True)
 
             # Acquisition.StimulusPresentation
             cuestamps = g_pres['auditory_cue']['timestamps']

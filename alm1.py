@@ -22,7 +22,7 @@ class VirusInfectionSite(dj.Manual):
     infection_y : decimal(3,2)   # (mm)
     infection_z : decimal(3,2)   # (mm)
     """
-        
+
 
 @schema
 class BrainArea(dj.Lookup):
@@ -179,7 +179,7 @@ class SpikeSorting(dj.Imported):
         unit  : smallint   # single unit number in recording
         """
         
-    class Type(dj.Part):
+    class CellType(dj.Part):
         definition = """
         -> SpikeSorting.Unit
         ---
@@ -226,7 +226,7 @@ class Acquisition(dj.Imported):
         stop_time    : float
         """
         
-    class TrialTypes(dj.Part):
+    class TrialType(dj.Part):
         definition = """
         -> Acquisition.Trial 
         -> TrialType
