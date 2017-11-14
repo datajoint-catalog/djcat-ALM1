@@ -173,7 +173,7 @@ class SpikeSortingMethod(dj.Lookup):
     ---
     spike_sort_description      : varchar(1024)
     """
-    contents = [('default', 'default spike sorting method')]
+    contents = [('default', 'waveform shape ChR tagging and collision test')]
 
 
 @schema
