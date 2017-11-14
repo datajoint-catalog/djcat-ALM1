@@ -472,6 +472,16 @@ class CellType(dj.Lookup):
 
 
 @schema
+class SpikeSortingMethod(dj.Lookup):
+    definition = """
+    spike_sort_method           : varchar(12)           # spike sort short name
+    ---
+    spike_sort_description      : varchar(1024)
+    """
+    contents = [('default', 'waveform shape ChR tagging and collision test')]
+
+
+@schema
 class SpikeSorting(dj.Computed):
     '''
     SpikeSorting
@@ -483,8 +493,7 @@ class SpikeSorting(dj.Computed):
 
     definition = """
     -> Ephys
-    ---
-    identification_method	: varchar(60)
+    -> SpikeSortingMethod
     """
 
     class Unit(dj.Part):
@@ -526,8 +535,7 @@ class SpikeSorting(dj.Computed):
 
         g_xlu = f['processing']['extracellular_units']
 
-        key['identification_method'] = \
-            g_xlu['identification_method'][()].decode()
+        key['spike_sort_method'] = 'default'
 
         self.insert1(key, ignore_extra_fields=True)
 

@@ -165,12 +165,22 @@ class CellType(dj.Lookup):
     """
     contents = zip(['pyramidal', 'FS'])
 
+
+@schema
+class SpikeSortingMethod(dj.Lookup):
+    definition = """
+    spike_sort_method           : varchar(12)           # spike sort short name
+    ---
+    spike_sort_description      : varchar(1024)
+    """
+    contents = [('default', 'default spike sorting method')]
+
+
 @schema
 class SpikeSorting(dj.Imported):
     definition = """
-    -> Ephys 
-    ---
-    identification_method  : varchar(60)
+    -> Ephys
+    -> SpikeSortingMethod
     """
     
     class Unit(dj.Part):
