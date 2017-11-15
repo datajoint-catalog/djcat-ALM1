@@ -22,7 +22,7 @@ class VirusInfectionSite(dj.Manual):
     infection_y : decimal(3,2)   # (mm)
     infection_z : decimal(3,2)   # (mm)
     """
-        
+
 
 @schema
 class BrainArea(dj.Lookup):
@@ -165,12 +165,22 @@ class CellType(dj.Lookup):
     """
     contents = zip(['pyramidal', 'FS'])
 
+
+@schema
+class SpikeSortingMethod(dj.Lookup):
+    definition = """
+    spike_sort_method           : varchar(12)           # spike sort short name
+    ---
+    spike_sort_description      : varchar(1024)
+    """
+    contents = [('default', 'waveform shape ChR tagging and collision test')]
+
+
 @schema
 class SpikeSorting(dj.Imported):
     definition = """
-    -> Ephys 
-    ---
-    identification_method  : varchar(60)
+    -> Ephys
+    -> SpikeSortingMethod
     """
     
     class Unit(dj.Part):
@@ -179,7 +189,7 @@ class SpikeSorting(dj.Imported):
         unit  : smallint   # single unit number in recording
         """
         
-    class Type(dj.Part):
+    class CellType(dj.Part):
         definition = """
         -> SpikeSorting.Unit
         ---
@@ -226,7 +236,7 @@ class Acquisition(dj.Imported):
         stop_time    : float
         """
         
-    class TrialTypes(dj.Part):
+    class TrialType(dj.Part):
         definition = """
         -> Acquisition.Trial 
         -> TrialType

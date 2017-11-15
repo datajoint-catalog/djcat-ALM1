@@ -356,7 +356,7 @@ class TrialType(dj.Lookup):
 
     TRIALTYPE_TODO = '''
     - split into expected / observed
-    - implies updating Acquisition.TrialTypes to match
+    - implies updating Acquisition.TrialType to match
     '''
 
     definition = """
@@ -472,6 +472,16 @@ class CellType(dj.Lookup):
 
 
 @schema
+class SpikeSortingMethod(dj.Lookup):
+    definition = """
+    spike_sort_method           : varchar(12)           # spike sort short name
+    ---
+    spike_sort_description      : varchar(1024)
+    """
+    contents = [('default', 'waveform shape ChR tagging and collision test')]
+
+
+@schema
 class SpikeSorting(dj.Computed):
     '''
     SpikeSorting
@@ -483,8 +493,7 @@ class SpikeSorting(dj.Computed):
 
     definition = """
     -> Ephys
-    ---
-    identification_method	: varchar(60)
+    -> SpikeSortingMethod
     """
 
     class Unit(dj.Part):
@@ -494,7 +503,7 @@ class SpikeSorting(dj.Computed):
         unit			: smallint	# unit number
         """
 
-    class Type(dj.Part):
+    class CellType(dj.Part):
 
         definition = """
         -> SpikeSorting.Unit
@@ -526,8 +535,7 @@ class SpikeSorting(dj.Computed):
 
         g_xlu = f['processing']['extracellular_units']
 
-        key['identification_method'] = \
-            g_xlu['identification_method'][()].decode()
+        key['spike_sort_method'] = 'default'
 
         self.insert1(key, ignore_extra_fields=True)
 
@@ -554,11 +562,11 @@ class SpikeSorting(dj.Computed):
             if 'and' in c_str:
                 for c_str_i in c_str.split(' and '):
                     key['cell_type'] = c_str_i
-                    self.Type().insert1(key, ignore_extra_fields=True)
+                    self.CellType().insert1(key, ignore_extra_fields=True)
             else:
                 if c_str != '[]':
                     key['cell_type'] = c_str
-                    self.Type().insert1(key, ignore_extra_fields=True)
+                    self.CellType().insert1(key, ignore_extra_fields=True)
 
             # Spikes
             key['spike_times'] = g_xlu['UnitTimes'][ukey]['times'].value
@@ -598,7 +606,7 @@ class Acquisition(dj.Computed):
         stop_time		: float
         """
 
-    class TrialTypes(dj.Part):
+    class TrialType(dj.Part):
 
         definition = """
         -> Acquisition.Trial
@@ -641,7 +649,7 @@ class Acquisition(dj.Computed):
         # Acquisition.Trial
         '''
         alternately:
-        load TrialTypes, UnitInTrial, StimulusPresentation
+        load TrialType, UnitInTrial, StimulusPresentation
         in single top-level trial iteration
         '''
         g_epochs = f['epochs']
@@ -660,12 +668,13 @@ class Acquisition(dj.Computed):
 
             # Acquisition.UnitInTrial
             d_units = g_epochs[tkey]['units_present']
+            key['spike_sort_method'] = 'default'
             if d_units[(0,)].decode() != 'NA':  # XXX: assuming convention
                 for u in d_units:
                     key['unit'] = u.decode().split('_')[1]
                     self.UnitInTrial().insert1(key, ignore_extra_fields=True)
 
-            # Acquisition.TrialTypes
+            # Acquisition.TrialType
             # XXX: ignoring trial_start_times yet doesn't match epoch start
             # trial_start_times *seems* like unrounded epoch[n]['start_time']?
 
@@ -674,7 +683,7 @@ class Acquisition(dj.Computed):
             for i in range(len(ttmat)):  # 8 trial types
                 if ttmat[i][tidx]:
                     key['trial_type'] = ttstr[i].decode()
-                    self.TrialTypes().insert1(key, ignore_extra_fields=True)
+                    self.TrialType().insert1(key, ignore_extra_fields=True)
 
             # Acquisition.StimulusPresentation
             cuestamps = g_pres['auditory_cue']['timestamps']
