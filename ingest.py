@@ -668,6 +668,7 @@ class Acquisition(dj.Computed):
 
             # Acquisition.UnitInTrial
             d_units = g_epochs[tkey]['units_present']
+            key['spike_sort_method'] = 'default'
             if d_units[(0,)].decode() != 'NA':  # XXX: assuming convention
                 for u in d_units:
                     key['unit'] = u.decode().split('_')[1]
