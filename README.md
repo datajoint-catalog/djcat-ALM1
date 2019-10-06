@@ -17,7 +17,7 @@ Before you start working with the pipeline, please obtain the following credenti
 
 ## Setup
 The instructions for downloading the DataJoint library are available here: 
-http://docs.datajoint.io/setup/Install-and-connect.html
+https://docs.datajoint.io/python/setup/01-Install-and-Connect.html
 
 Additionally, the common 'djcat-lab' module for general experiment data needs to
 be cloned from:
