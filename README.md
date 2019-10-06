@@ -1,6 +1,6 @@
 # ALM-1 
 
-This pipeline is based on the study described in [Li, Nuo, et al. "Amotor cortex circuit for motor planning and movement." _Nature_ 519.7541 (2015): 51](https://www.ncbi.nlm.nih.gov/pubmed/25731172) with the data shared at  http://crcns.org/data-sets/motor-cortex/alm-1/
+This pipeline is based on the study described in [Li, Nuo, et al. "A motor cortex circuit for motor planning and movement." _Nature_ 519.7541 (2015): 51](https://www.ncbi.nlm.nih.gov/pubmed/25731172) with the data shared at  http://crcns.org/data-sets/motor-cortex/alm-1/
 
 
 ## Online viewing
